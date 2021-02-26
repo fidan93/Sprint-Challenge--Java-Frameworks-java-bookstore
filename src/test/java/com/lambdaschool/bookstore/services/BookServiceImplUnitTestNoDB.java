@@ -1,11 +1,13 @@
 package com.lambdaschool.bookstore.services;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lambdaschool.bookstore.BookstoreApplicationTest;
 import com.lambdaschool.bookstore.exceptions.ResourceNotFoundException;
 import com.lambdaschool.bookstore.models.Author;
 import com.lambdaschool.bookstore.models.Book;
 import com.lambdaschool.bookstore.models.Section;
 import com.lambdaschool.bookstore.models.Wrote;
+import com.lambdaschool.bookstore.repository.AuthorRepository;
 import com.lambdaschool.bookstore.repository.BookRepository;
 import org.junit.After;
 import org.junit.Before;
@@ -17,14 +19,18 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.junit4.SpringRunner;
-
+import static org.mockito.ArgumentMatchers.any;
+import static org.junit.Assert.assertNotNull;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import static junit.framework.TestCase.assertEquals;
 
 @RunWith(SpringRunner.class)
-@SpringBootTest(classes = BookstoreApplicationTest.class)
+@SpringBootTest(classes = BookstoreApplicationTest.class,
+    properties = {
+    "command.line.runner.enabled=false"})
 public class BookServiceImplUnitTestNoDB
 {
 
@@ -33,6 +39,12 @@ public class BookServiceImplUnitTestNoDB
 
     @MockBean
     private BookRepository bookrepos;
+
+    @MockBean
+    private SectionService sectionService;
+
+    @MockBean
+        private AuthorRepository authorrepos;
 
     List<Book> myBookList = new ArrayList<>();
 
@@ -48,7 +60,7 @@ public class BookServiceImplUnitTestNoDB
         Author a3 = new Author("Jerry", "Poe");
         a1.setAuthorid(3);
         Author a4 = new Author("Wells", "Teague");
-        a1.setAuthorid(4);
+        a4.setAuthorid(4);
         Author a5 = new Author("George", "Gallinger");
         a1.setAuthorid(5);
         Author a6 = new Author("Ian", "Stewart");
@@ -115,35 +127,107 @@ public class BookServiceImplUnitTestNoDB
     @Test
     public void findAll()
     {
+        Mockito.when(bookrepos.findAll())
+            .thenReturn(myBookList);
+
+        assertEquals(5,bookService.findAll().size());
     }
 
     @Test
     public void findBookById()
     {
+        Mockito.when(bookrepos.findById(5L))
+            .thenReturn(Optional.of(myBookList.get(0)));
+
+        assertEquals("Flatterland",bookService.findBookById(5).getTitle());
     }
 
     @Test(expected = ResourceNotFoundException.class)
     public void notFindBookById()
     {
+        Mockito.when(bookrepos.findById(100L))
+            .thenThrow(ResourceNotFoundException.class);
+
+        assertEquals("Flatterland",bookService.findBookById(100).getTitle());
     }
 
     @Test
     public void delete()
     {
+        Mockito.when(bookrepos.findById(5L))
+            .thenReturn(Optional.of(myBookList.get(0)));
+
+        Mockito.doNothing()
+            .when(bookrepos)
+            .deleteById(5L);
+
+        bookService.delete(5);
+        assertEquals(5,myBookList.size());
     }
 
     @Test
     public void save()
     {
+        Author a4 = new Author("Wells", "Teague");
+        a4.setAuthorid(4);
+        Section s3 = new Section("Travel");
+        s3.setSectionid(3);
+        Book b5 = new Book("Calling Texas Home", "1885171382134", 2000, s3);
+        b5.setBookid(5);
+        b5.getWrotes()
+            .add(new Wrote(a4, b5));
+
+        Mockito.when(bookrepos.findById(5L))
+            .thenReturn(Optional.of(b5));
+        Mockito.when(sectionService.findSectionById(3L))
+            .thenReturn(s3);
+        Mockito.when(authorrepos.findById(4L))
+            .thenReturn(Optional.of(a4));
+
+        Mockito.when(bookrepos.save(any(Book.class)))
+            .thenReturn(b5);
+
+        Book book = bookService.save(b5);
+        assertNotNull(book);
+        System.out.println(book);
+        assertEquals("Calling Texas Home",book.getTitle());
     }
 
     @Test
     public void update()
     {
+        Author a4 = new Author("Wells", "Teague");
+        a4.setAuthorid(4);
+        Section s3 = new Section("Travel");
+        s3.setSectionid(3);
+        Book b5 = new Book("Calling Texas Home", "1885171382134", 2000, s3);
+        b5.setBookid(5);
+        b5.getWrotes()
+            .add(new Wrote(a4, b5));
+
+
+        Mockito.when(bookrepos.findById(5L))
+            .thenReturn(Optional.of(b5));
+        Mockito.when(sectionService.findSectionById(3L))
+            .thenReturn(s3);
+        Mockito.when(authorrepos.findById(4L))
+            .thenReturn(Optional.of(a4));
+
+        Mockito.when(bookrepos.save(any(Book.class)))
+            .thenReturn(b5);
+
+        Book newBook = bookService.update(b5,5);
+        assertNotNull(newBook);
+        assertEquals("Calling Texas Home",newBook.getTitle());
     }
 
     @Test
     public void deleteAll()
     {
+        Mockito.doNothing()
+            .when(bookrepos)
+            .deleteAll();
+        bookService.deleteAll();
+        assertEquals(5,myBookList.size());
     }
 }

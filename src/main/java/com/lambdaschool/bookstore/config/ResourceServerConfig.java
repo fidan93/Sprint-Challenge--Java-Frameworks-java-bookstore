@@ -59,6 +59,8 @@ public class ResourceServerConfig
                 .authenticated()
                 .antMatchers("/roles/**")
                 .hasAnyRole("ADMIN", "DATA")
+                .antMatchers("/books/**")
+                .hasAnyRole("ADMIN","USER","DATA")
                 .anyRequest().denyAll()
                 .and()
                 .exceptionHandling()

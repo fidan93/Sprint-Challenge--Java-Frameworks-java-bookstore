@@ -2,6 +2,8 @@ package com.lambdaschool.bookstore.services;
 
 import com.lambdaschool.bookstore.models.ValidationError;
 import org.springframework.stereotype.Service;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 
 import javax.validation.ConstraintViolation;
 import javax.validation.ConstraintViolationException;
@@ -18,7 +20,7 @@ public class HelperFunctionsImpl
         // data validations get wrapped in other exceptions as we work through the Spring
         // exception chain. Hence we have to search the entire Spring Exception Stack
         // to see if we have any violation constraints.
-        while ((cause != null) && !(cause instanceof ConstraintViolationException))
+        while ((cause != null) && !(cause instanceof ConstraintViolationException || cause instanceof MethodArgumentNotValidException))
         {
             cause = cause.getCause();
         }
@@ -28,15 +30,16 @@ public class HelperFunctionsImpl
         // we know that cause either null or an instance of ConstraintViolationException
         if (cause != null)
         {
-            ConstraintViolationException ex = (ConstraintViolationException) cause;
-            for (ConstraintViolation cv : ex.getConstraintViolations())
-            {
-                ValidationError newVe = new ValidationError();
-                newVe.setCode(cv.getInvalidValue()
-                                      .toString());
-                newVe.setMessage(cv.getMessage());
-                listVE.add(newVe);
-            }
+                        ConstraintViolationException ex = (ConstraintViolationException) cause;
+                        for (ConstraintViolation cv : ex.getConstraintViolations())
+                        {
+                            ValidationError newVe = new ValidationError();
+                            newVe.setCode(cv.getInvalidValue()
+                                                  .toString());
+                            newVe.setMessage(cv.getMessage());
+                            listVE.add(newVe);
+                        }
+
         }
         return listVE;
     }
